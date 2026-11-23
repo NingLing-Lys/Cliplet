@@ -107,6 +107,13 @@ public partial class MainWindow : Window
 
     void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
+    void Filter_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string tag) return;
+        if (Enum.TryParse<ContentFilter>(tag, out var filter))
+            store.SetFilter(filter);
+    }
+
     void Title_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed)

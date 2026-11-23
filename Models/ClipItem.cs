@@ -11,6 +11,27 @@ public enum ClipKind
     Files
 }
 
+public enum ContentCategory
+{
+    Text,
+    Image,
+    Video,
+    Audio,
+    Link,
+    File
+}
+
+public enum ContentFilter
+{
+    All,
+    Text,
+    Image,
+    Video,
+    Audio,
+    Link,
+    File
+}
+
 public sealed class ClipItem : INotifyPropertyChanged
 {
     public required string Id { get; init; }
@@ -67,12 +88,16 @@ public sealed class ClipItem : INotifyPropertyChanged
         _ => string.IsNullOrWhiteSpace(Preview) ? "空白文本" : Preview
     };
 
-    public string KindMark => Kind switch
+    public ContentCategory Category => Classify();
+
+    public string KindMark => Category switch
     {
-        ClipKind.Text => "文",
-        ClipKind.Image => "图",
-        ClipKind.Files when IsSingleImage => "图",
-        ClipKind.Files when FilePaths.Length > 1 => FilePaths.Length.ToString(),
+        ContentCategory.Text => "文",
+        ContentCategory.Image => "图",
+        ContentCategory.Video => "视",
+        ContentCategory.Audio => "音",
+        ContentCategory.Link => "链",
+        ContentCategory.File when FilePaths.Length > 1 => FilePaths.Length.ToString(),
         _ => "档"
     };
 
@@ -86,7 +111,7 @@ public sealed class ClipItem : INotifyPropertyChanged
                 if (File.Exists(ThumbPath)) return ThumbPath;
             }
             if (Kind == ClipKind.Files)
-                return FilePaths.FirstOrDefault(IsImageFile);
+                return FilePaths.FirstOrDefault(path => IsImageFile(path) && File.Exists(path));
             return null;
         }
     }
@@ -111,22 +136,86 @@ public sealed class ClipItem : INotifyPropertyChanged
         }
     }
 
-    string KindLabel => Kind switch
+    string KindLabel => Category switch
     {
-        ClipKind.Text => "文本",
-        ClipKind.Image => "图片",
-        ClipKind.Files when IsSingleImage => "图片",
-        ClipKind.Files when FilePaths.Length > 1 => $"{FilePaths.Length} 个文件",
+        ContentCategory.Text => "文字",
+        ContentCategory.Image => "图片",
+        ContentCategory.Video => "视频",
+        ContentCategory.Audio => "音频",
+        ContentCategory.Link => "链接",
+        ContentCategory.File when FilePaths.Length > 1 => $"{FilePaths.Length} 个文件",
         _ => "文件"
     };
 
     public void RefreshLabels() => OnPropertyChanged(nameof(Subtitle));
 
+    public bool Matches(ContentFilter filter) => filter switch
+    {
+        ContentFilter.All => true,
+        ContentFilter.Text => Category == ContentCategory.Text,
+        ContentFilter.Image => Category == ContentCategory.Image,
+        ContentFilter.Video => Category == ContentCategory.Video,
+        ContentFilter.Audio => Category == ContentCategory.Audio,
+        ContentFilter.Link => Category == ContentCategory.Link,
+        ContentFilter.File => Category == ContentCategory.File,
+        _ => true
+    };
+
+    ContentCategory Classify()
+    {
+        if (Kind == ClipKind.Image) return ContentCategory.Image;
+        if (Kind == ClipKind.Text)
+            return IsLinkText(Text) ? ContentCategory.Link : ContentCategory.Text;
+        if (FilePaths.Length == 0) return ContentCategory.File;
+
+        var categories = FilePaths
+            .Where(path => File.Exists(path) || Directory.Exists(path))
+            .Select(ClassifyPath)
+            .Distinct()
+            .ToArray();
+        if (categories.Length == 0) return ContentCategory.File;
+        if (categories.Length == 1) return categories[0];
+        return ContentCategory.File;
+    }
+
+    static ContentCategory ClassifyPath(string path)
+    {
+        if (Directory.Exists(path)) return ContentCategory.File;
+        if (IsImageFile(path)) return ContentCategory.Image;
+        if (IsVideoFile(path)) return ContentCategory.Video;
+        if (IsAudioFile(path)) return ContentCategory.Audio;
+        return ContentCategory.File;
+    }
+
     public static bool IsImageFile(string? path)
     {
-        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+        if (string.IsNullOrEmpty(path)) return false;
         return Path.GetExtension(path).ToLowerInvariant() is
             ".png" or ".jpg" or ".jpeg" or ".gif" or ".bmp" or ".tif" or ".tiff" or ".webp" or ".ico" or ".jfif";
+    }
+
+    public static bool IsVideoFile(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return false;
+        return Path.GetExtension(path).ToLowerInvariant() is
+            ".mp4" or ".mkv" or ".avi" or ".mov" or ".wmv" or ".flv" or ".webm" or ".m4v" or ".mpeg" or ".mpg" or ".ts" or ".m2ts";
+    }
+
+    public static bool IsAudioFile(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return false;
+        return Path.GetExtension(path).ToLowerInvariant() is
+            ".mp3" or ".wav" or ".flac" or ".aac" or ".m4a" or ".ogg" or ".wma" or ".aiff" or ".opus";
+    }
+
+    public static bool IsLinkText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var value = text.Trim();
+        if (value.Contains('\n') || value.Contains(' ')) return false;
+        return value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("www.", StringComparison.OrdinalIgnoreCase);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

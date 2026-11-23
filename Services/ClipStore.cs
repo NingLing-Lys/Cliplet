@@ -33,6 +33,7 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
     string status = "单击复制，双击或回车粘贴";
     string hotkeyLabel = "Ctrl+Alt+V";
     bool paused;
+    ContentFilter filter = ContentFilter.All;
 
     public ClipStore()
     {
@@ -40,6 +41,9 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
         settingsPath = Path.Combine(database.DirectoryPath, "settings.json");
         settings = LoadSettings();
         paused = settings.Paused;
+        filter = Enum.IsDefined(typeof(ContentFilter), settings.Filter)
+            ? (ContentFilter)settings.Filter
+            : ContentFilter.All;
         all.AddRange(database.LoadAll());
         RepairStoredImages();
         lastSequence = NativeMethods.GetClipboardSequenceNumber();
@@ -57,6 +61,37 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
             Rebuild();
         }
     }
+
+    public ContentFilter Filter
+    {
+        get => filter;
+        set
+        {
+            if (filter == value) return;
+            filter = value;
+            settings.Filter = (int)value;
+            SaveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsFilterAll));
+            OnPropertyChanged(nameof(IsFilterText));
+            OnPropertyChanged(nameof(IsFilterImage));
+            OnPropertyChanged(nameof(IsFilterVideo));
+            OnPropertyChanged(nameof(IsFilterAudio));
+            OnPropertyChanged(nameof(IsFilterLink));
+            OnPropertyChanged(nameof(IsFilterFile));
+            Rebuild();
+        }
+    }
+
+    public bool IsFilterAll => Filter == ContentFilter.All;
+    public bool IsFilterText => Filter == ContentFilter.Text;
+    public bool IsFilterImage => Filter == ContentFilter.Image;
+    public bool IsFilterVideo => Filter == ContentFilter.Video;
+    public bool IsFilterAudio => Filter == ContentFilter.Audio;
+    public bool IsFilterLink => Filter == ContentFilter.Link;
+    public bool IsFilterFile => Filter == ContentFilter.File;
+
+    public void SetFilter(ContentFilter value) => Filter = value;
 
     public string Status
     {
@@ -98,7 +133,8 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
     {
         get
         {
-            if (!string.IsNullOrWhiteSpace(Query)) return "没有匹配的记录";
+            if (!string.IsNullOrWhiteSpace(Query) || Filter != ContentFilter.All)
+                return "没有匹配的记录";
             return Paused ? "记录已暂停" : "复制文本、图片或文件后会出现在这里";
         }
     }
@@ -331,10 +367,10 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
     void Rebuild()
     {
         var needle = Query.Trim();
-        IEnumerable<ClipItem> items = all;
+        IEnumerable<ClipItem> items = all.Where(item => item.Matches(Filter));
         if (needle.Length > 0)
         {
-            items = all.Where(item =>
+            items = items.Where(item =>
                 item.Title.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
                 item.Text.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
                 item.Preview.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
@@ -350,6 +386,7 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
         foreach (var item in ordered) Visible.Add(item);
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyText));
+        NotifyCheckedChanged();
         ListReset?.Invoke();
     }
 
@@ -665,6 +702,7 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
     sealed class Settings
     {
         public bool Paused { get; set; }
+        public int Filter { get; set; }
         public double Width { get; set; } = 420;
         public double Height { get; set; } = 560;
     }

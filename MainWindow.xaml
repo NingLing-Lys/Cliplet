@@ -67,6 +67,16 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="FilterChip" TargetType="Button" BasedOn="{StaticResource ChipButton}">
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="MinWidth" Value="40"/>
+        </Style>
+        <Style x:Key="FilterChipSelected" TargetType="Button" BasedOn="{StaticResource FilterChip}">
+            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        </Style>
     </Window.Resources>
     <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
         <Grid>
@@ -82,22 +92,123 @@
                 <Button Content="×" HorizontalAlignment="Right" FontSize="16" Style="{StaticResource IconButton}" Click="Close_Click" ToolTip="关闭"/>
             </Grid>
 
-            <Border Grid.Row="1" Margin="12,10,12,8" Padding="10,7" CornerRadius="8" Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
-                <Grid>
-                    <TextBox x:Name="SearchBox"
-                             Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             FontSize="14"
-                             Foreground="{DynamicResource TextBrush}"
-                             CaretBrush="{DynamicResource TextBrush}"/>
-                    <TextBlock Text="搜索文本、文件或来源"
-                               IsHitTestVisible="False"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource SecondaryBrush}"
-                               Visibility="{Binding Query, Converter={StaticResource EmptyToVisible}}"/>
-                </Grid>
-            </Border>
+            <StackPanel Grid.Row="1" Margin="12,10,12,8">
+                <Border Padding="10,7" CornerRadius="8" Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
+                    <Grid>
+                        <TextBox x:Name="SearchBox"
+                                 Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 FontSize="14"
+                                 Foreground="{DynamicResource TextBrush}"
+                                 CaretBrush="{DynamicResource TextBrush}"/>
+                        <TextBlock Text="搜索文本、文件或来源"
+                                   IsHitTestVisible="False"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SecondaryBrush}"
+                                   Visibility="{Binding Query, Converter={StaticResource EmptyToVisible}}"/>
+                    </Grid>
+                </Border>
+                <ScrollViewer Margin="0,8,0,0"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled"
+                              CanContentScroll="False">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="全部" Click="Filter_Click" Tag="All" ToolTip="显示全部类型">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterAll}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="文字" Click="Filter_Click" Tag="Text" ToolTip="纯文本">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterText}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="图片" Click="Filter_Click" Tag="Image" ToolTip="截图或图片文件">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterImage}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="视频" Click="Filter_Click" Tag="Video" ToolTip="视频文件">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterVideo}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="音频" Click="Filter_Click" Tag="Audio" ToolTip="音频文件">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterAudio}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="链接" Click="Filter_Click" Tag="Link" ToolTip="网址链接">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterLink}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="文件" Click="Filter_Click" Tag="File" ToolTip="其他文件或混合类型" Margin="0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterFile}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+            </StackPanel>
 
             <Grid Grid.Row="2">
                 <Grid.RowDefinitions>
