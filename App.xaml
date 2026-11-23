@@ -1,0 +1,19 @@
+﻿<Application x:Class="Cliplet.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Cliplet">
+    <Application.Resources>
+        <local:PathToImageConverter x:Key="PathToImage"/>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisible"/>
+        <local:EmptyToVisibilityConverter x:Key="EmptyToVisible"/>
+        <local:NonEmptyToVisibilityConverter x:Key="NonEmptyToVisible"/>
+        <SolidColorBrush x:Key="WindowBg" Color="#F6F6F7"/>
+        <SolidColorBrush x:Key="CardBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#1C1C1E"/>
+        <SolidColorBrush x:Key="SecondaryBrush" Color="#6E6E73"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#2563EB"/>
+        <SolidColorBrush x:Key="LineBrush" Color="#E4E4E8"/>
+        <SolidColorBrush x:Key="ItemHover" Color="#14000000"/>
+        <SolidColorBrush x:Key="ItemSelected" Color="#332563EB"/>
+    </Application.Resources>
+</Application>
