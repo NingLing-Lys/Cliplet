@@ -185,12 +185,62 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
 
     public void Delete(ClipItem item)
     {
-        all.Remove(item);
-        database.Delete(item.Id);
-        RemoveFiles(item);
-        if (SelectedId == item.Id) SelectedId = null;
+        RemoveItems([item]);
         Status = "已删除";
         Rebuild();
+    }
+
+    public int CheckedCount => Visible.Count(item => item.IsChecked);
+
+    public bool HasChecked => CheckedCount > 0;
+
+    public string DeleteCheckedLabel => CheckedCount > 0 ? $"删除选中 ({CheckedCount})" : "删除选中";
+
+    public void NotifyCheckedChanged()
+    {
+        OnPropertyChanged(nameof(CheckedCount));
+        OnPropertyChanged(nameof(HasChecked));
+        OnPropertyChanged(nameof(DeleteCheckedLabel));
+    }
+
+    public void SetChecked(ClipItem item, bool value)
+    {
+        if (item.IsChecked == value) return;
+        item.IsChecked = value;
+        NotifyCheckedChanged();
+    }
+
+    public void SelectAllVisible()
+    {
+        foreach (var item in Visible) item.IsChecked = true;
+        NotifyCheckedChanged();
+    }
+
+    public void ClearChecks()
+    {
+        foreach (var item in all) item.IsChecked = false;
+        NotifyCheckedChanged();
+    }
+
+    public void DeleteChecked()
+    {
+        var doomed = Visible.Where(item => item.IsChecked).ToList();
+        if (doomed.Count == 0) return;
+        RemoveItems(doomed);
+        Status = doomed.Count == 1 ? "已删除" : $"已删除 {doomed.Count} 条";
+        Rebuild();
+        NotifyCheckedChanged();
+    }
+
+    void RemoveItems(IReadOnlyList<ClipItem> items)
+    {
+        foreach (var item in items)
+        {
+            all.Remove(item);
+            database.Delete(item.Id);
+            RemoveFiles(item);
+            if (SelectedId == item.Id) SelectedId = null;
+        }
     }
 
     public void ClearUnpinned()

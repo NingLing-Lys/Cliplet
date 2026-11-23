@@ -25,6 +25,7 @@ public sealed class ClipItem : INotifyPropertyChanged
 
     DateTime createdAt;
     bool pinned;
+    bool isChecked;
 
     public required DateTime CreatedAt
     {
@@ -45,6 +46,17 @@ public sealed class ClipItem : INotifyPropertyChanged
             pinned = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(PinGlyph));
+        }
+    }
+
+    public bool IsChecked
+    {
+        get => isChecked;
+        set
+        {
+            if (isChecked == value) return;
+            isChecked = value;
+            OnPropertyChanged();
         }
     }
 

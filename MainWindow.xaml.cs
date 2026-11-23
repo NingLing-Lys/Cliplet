@@ -101,6 +101,7 @@ public partial class MainWindow : Window
         if (!IsVisible) return;
         store.SaveWindowSize(Width, Height);
         store.Query = "";
+        store.ClearChecks();
         Hide();
     }
 
@@ -156,6 +157,18 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    void Check_Click(object sender, RoutedEventArgs e)
+    {
+        store.NotifyCheckedChanged();
+        e.Handled = true;
+    }
+
+    void SelectAll_Click(object sender, RoutedEventArgs e) => store.SelectAllVisible();
+
+    void ClearChecks_Click(object sender, RoutedEventArgs e) => store.ClearChecks();
+
+    void DeleteChecked_Click(object sender, RoutedEventArgs e) => store.DeleteChecked();
+
     void Pin_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is ClipItem item)
@@ -166,6 +179,7 @@ public partial class MainWindow : Window
     void ClipList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (FindParent<Button>(e.OriginalSource as DependencyObject) != null) return;
+        if (FindParent<CheckBox>(e.OriginalSource as DependencyObject) != null) return;
         if (FindParent<ListBoxItem>(e.OriginalSource as DependencyObject)?.DataContext is not ClipItem item) return;
         ClipList.SelectedItem = item;
         store.SelectedId = item.Id;
@@ -214,7 +228,14 @@ public partial class MainWindow : Window
         }
         if ((e.Key == Key.Back || e.Key == Key.Delete) && (ctrl || string.IsNullOrEmpty(store.Query)))
         {
-            if (ClipList.SelectedItem is ClipItem item) store.Delete(item);
+            if (store.HasChecked) store.DeleteChecked();
+            else if (ClipList.SelectedItem is ClipItem item) store.Delete(item);
+            e.Handled = true;
+            return;
+        }
+        if (ctrl && e.Key == Key.A && !SearchBox.IsKeyboardFocusWithin)
+        {
+            store.SelectAllVisible();
             e.Handled = true;
             return;
         }
