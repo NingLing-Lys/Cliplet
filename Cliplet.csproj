@@ -9,10 +9,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationTitle>Cliplet</ApplicationTitle>
     <Product>Cliplet</Product>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Description>Windows 剪贴板历史</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,9 @@
 
   <ItemGroup>
     <Content Include="Assets\tray.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\apps\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

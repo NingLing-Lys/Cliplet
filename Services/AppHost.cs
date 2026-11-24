@@ -27,8 +27,14 @@ sealed class AppHost : IDisposable
 
         Theme.Apply();
         store = new ClipStore();
-        messages = new MessageHost();
-        window = new MainWindow(store);
+        var (mods, key) = store.ResolveHotkey();
+        var (shotMods, shotKey) = store.ResolveScreenshotHotkey();
+        messages = new MessageHost(mods, key, shotMods, shotKey);
+        store.HotkeyLabel = messages.HotkeyLabel;
+        store.SaveHotkey(messages.HotkeyMods, messages.HotkeyKey);
+        store.ScreenshotHotkeyLabel = messages.ScreenshotHotkeyLabel;
+        store.SaveScreenshotHotkey(messages.ScreenshotHotkeyMods, messages.ScreenshotHotkeyKey);
+        window = new MainWindow(store, messages);
         tray = new Forms.NotifyIcon
         {
             Text = "Cliplet",
@@ -52,7 +58,9 @@ sealed class AppHost : IDisposable
     {
         messages.ClipboardChanged += () => store.OnClipboardChanged();
         messages.HotkeyPressed += () => window.ToggleFromHotkey();
+        messages.ScreenshotHotkeyPressed += () => window.StartScreenshotFromHotkey();
         store.HotkeyLabel = messages.HotkeyLabel;
+        store.ScreenshotHotkeyLabel = messages.ScreenshotHotkeyLabel;
     }
 
     public void Dispose()
@@ -259,28 +267,51 @@ static class Theme
         var resources = System.Windows.Application.Current.Resources;
         if (light)
         {
-            Put(resources, "WindowBg", "#F6F6F7");
-            Put(resources, "CardBg", "#FFFFFF");
+            Put(resources, "WindowBg", "#00FFFFFF");
+            Put(resources, "GlassFill", "#F4F4F6");
+            Put(resources, "GlassStroke", "#1A000000");
+            Put(resources, "CardBg", "#FFFFFFFF");
             Put(resources, "TextBrush", "#1C1C1E");
-            Put(resources, "SecondaryBrush", "#6E6E73");
-            Put(resources, "AccentBrush", "#2563EB");
-            Put(resources, "LineBrush", "#E4E4E8");
-            Put(resources, "ItemHover", "#14000000");
-            Put(resources, "ItemSelected", "#332563EB");
+            Put(resources, "SecondaryBrush", "#8E8E93");
+            Put(resources, "AccentBrush", "#007AFF");
+            Put(resources, "LineBrush", "#1A3C3C43");
+            Put(resources, "ItemHover", "#0F000000");
+            Put(resources, "ItemSelected", "#007AFF");
+            Put(resources, "SearchFill", "#FFFFFFFF");
+            Put(resources, "ChipFill", "#EEEFF1");
+            Put(resources, "DangerBrush", "#FF3B30");
+            Put(resources, "OnAccentBrush", "#FFFFFFFF");
+            PutColor(resources, "ShadowColor", "#40000000");
+            PutColor(resources, "HighlightTop", "#FFFFFFFF");
+            PutColor(resources, "HighlightMid", "#FFFFFFFF");
+            PutColor(resources, "HighlightBot", "#FFFFFFFF");
         }
         else
         {
-            Put(resources, "WindowBg", "#17171A");
-            Put(resources, "CardBg", "#232328");
-            Put(resources, "TextBrush", "#F3F3F5");
-            Put(resources, "SecondaryBrush", "#A0A0A8");
-            Put(resources, "AccentBrush", "#7AA2FF");
-            Put(resources, "LineBrush", "#34343A");
-            Put(resources, "ItemHover", "#14FFFFFF");
-            Put(resources, "ItemSelected", "#337AA2FF");
+            Put(resources, "WindowBg", "#00000000");
+            Put(resources, "GlassFill", "#E61C1C1E");
+            Put(resources, "GlassStroke", "#33FFFFFF");
+            Put(resources, "CardBg", "#FF2C2C2E");
+            Put(resources, "TextBrush", "#F5F5F7");
+            Put(resources, "SecondaryBrush", "#98989F");
+            Put(resources, "AccentBrush", "#0A84FF");
+            Put(resources, "LineBrush", "#22FFFFFF");
+            Put(resources, "ItemHover", "#18FFFFFF");
+            Put(resources, "ItemSelected", "#0A84FF");
+            Put(resources, "SearchFill", "#FF2C2C2E");
+            Put(resources, "ChipFill", "#33FFFFFF");
+            Put(resources, "DangerBrush", "#FF453A");
+            Put(resources, "OnAccentBrush", "#FFFFFFFF");
+            PutColor(resources, "ShadowColor", "#88000000");
+            PutColor(resources, "HighlightTop", "#33FFFFFF");
+            PutColor(resources, "HighlightMid", "#14FFFFFF");
+            PutColor(resources, "HighlightBot", "#08FFFFFF");
         }
     }
 
     static void Put(ResourceDictionary resources, string key, string hex) =>
         resources[key] = new Media.SolidColorBrush((Media.Color)Media.ColorConverter.ConvertFromString(hex)!);
+
+    static void PutColor(ResourceDictionary resources, string key, string hex) =>
+        resources[key] = (Media.Color)Media.ColorConverter.ConvertFromString(hex)!;
 }

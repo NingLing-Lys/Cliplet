@@ -7,13 +7,28 @@
         <local:BoolToVisibilityConverter x:Key="BoolToVisible"/>
         <local:EmptyToVisibilityConverter x:Key="EmptyToVisible"/>
         <local:NonEmptyToVisibilityConverter x:Key="NonEmptyToVisible"/>
-        <SolidColorBrush x:Key="WindowBg" Color="#F6F6F7"/>
-        <SolidColorBrush x:Key="CardBg" Color="#FFFFFF"/>
+        <local:SourceIconConverter x:Key="SourceIcon"/>
+        <local:HasSourceIconConverter x:Key="HasSourceIcon"/>
+        <local:NoSourceIconConverter x:Key="NoSourceIcon"/>
+
+        <!-- Clean light panel (reference style) -->
+        <SolidColorBrush x:Key="WindowBg" Color="#00FFFFFF"/>
+        <SolidColorBrush x:Key="GlassFill" Color="#F4F4F6"/>
+        <SolidColorBrush x:Key="GlassStroke" Color="#1A000000"/>
+        <SolidColorBrush x:Key="CardBg" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="TextBrush" Color="#1C1C1E"/>
-        <SolidColorBrush x:Key="SecondaryBrush" Color="#6E6E73"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#2563EB"/>
-        <SolidColorBrush x:Key="LineBrush" Color="#E4E4E8"/>
-        <SolidColorBrush x:Key="ItemHover" Color="#14000000"/>
-        <SolidColorBrush x:Key="ItemSelected" Color="#332563EB"/>
+        <SolidColorBrush x:Key="SecondaryBrush" Color="#8E8E93"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#007AFF"/>
+        <SolidColorBrush x:Key="LineBrush" Color="#1A3C3C43"/>
+        <SolidColorBrush x:Key="ItemHover" Color="#0F000000"/>
+        <SolidColorBrush x:Key="ItemSelected" Color="#007AFF"/>
+        <SolidColorBrush x:Key="SearchFill" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="ChipFill" Color="#EEEFF1"/>
+        <SolidColorBrush x:Key="DangerBrush" Color="#FF3B30"/>
+        <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFFFF"/>
+        <Color x:Key="ShadowColor">#40000000</Color>
+        <Color x:Key="HighlightTop">#FFFFFFFF</Color>
+        <Color x:Key="HighlightMid">#FFFFFFFF</Color>
+        <Color x:Key="HighlightBot">#FFFFFFFF</Color>
     </Application.Resources>
 </Application>

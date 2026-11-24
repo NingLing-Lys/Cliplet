@@ -89,6 +89,15 @@ sealed class ClipDatabase : IDisposable
         command.ExecuteNonQuery();
     }
 
+    public void SetCreatedAt(string id, DateTime createdAt)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE clips SET created_at = $created WHERE id = $id";
+        command.Parameters.AddWithValue("$created", ToUnix(createdAt));
+        command.Parameters.AddWithValue("$id", id);
+        command.ExecuteNonQuery();
+    }
+
     public void Delete(string id)
     {
         using var command = connection.CreateCommand();

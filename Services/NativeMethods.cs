@@ -15,8 +15,10 @@ static class NativeMethods
     public const uint ModAlt = 0x0001;
     public const uint ModControl = 0x0002;
     public const uint ModShift = 0x0004;
+    public const uint ModWin = 0x0008;
     public const uint ModNoRepeat = 0x4000;
     public const uint VkV = 0x56;
+    public const uint VkA = 0x41;
     public const uint VkSpace = 0x20;
     const byte VkControl = 0x11;
     const uint KeyEventKeyUp = 0x0002;
@@ -42,6 +44,86 @@ static class NativeMethods
     [DllImport("user32.dll")]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    public const int WhKeyboardLl = 13;
+    public const int WmKeyDown = 0x0100;
+    public const int WmSysKeyDown = 0x0104;
+    public const int LlkhfUp = 0x80;
+
+    public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+    [DllImport("gdi32.dll")]
+    public static extern bool DeleteObject(IntPtr hObject);
+
+    public const uint GaRoot = 2;
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr WindowFromPoint(NativePoint point);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out NativeRect lpRect);
+
+    /// <summary>Visible window bounds without Win10+ invisible resize borders.</summary>
+    public const int DwmwaExtendedFrameBounds = 9;
+
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out NativeRect pvAttribute, int cbAttribute);
+
+    public static bool TryGetVisibleWindowRect(IntPtr hwnd, out NativeRect rc)
+    {
+        if (DwmGetWindowAttribute(hwnd, DwmwaExtendedFrameBounds, out rc, Marshal.SizeOf<NativeRect>()) == 0
+            && rc.Right > rc.Left && rc.Bottom > rc.Top)
+            return true;
+        return GetWindowRect(hwnd, out rc) && rc.Right > rc.Left && rc.Bottom > rc.Top;
+    }
+
+    public const uint SwpNoZOrder = 0x0004;
+    public const uint SwpNoActivate = 0x0010;
+    public const uint SwpShowWindow = 0x0040;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsIconic(IntPtr hWnd);
+
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool IsWindow(IntPtr hWnd);
+
+    public const int VkLControl = 0xA2;
+    public const int VkRControl = 0xA3;
+    public const int VkLMenu = 0xA4;
+    public const int VkRMenu = 0xA5;
+    public const int VkLShift = 0xA0;
+    public const int VkRShift = 0xA1;
+    public const int VkLWin = 0x5B;
+    public const int VkRWin = 0x5C;
+
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
     public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
 
@@ -61,10 +143,21 @@ static class NativeMethods
     public static extern uint GetCurrentThreadId();
 
     [DllImport("user32.dll")]
+    static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+    [DllImport("user32.dll")]
+    static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
     static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool DestroyIcon(IntPtr hIcon);
+
+    const int SwRestore = 9;
 
     public static bool IsPasswordFocused()
     {
@@ -105,16 +198,19 @@ static class NativeMethods
     public static bool ForceForeground(IntPtr hwnd)
     {
         if (hwnd == IntPtr.Zero) return false;
+        try { AllowSetForegroundWindow(-1); } catch { /* ignore */ }
+        ShowWindow(hwnd, SwRestore);
         var foreground = GetForegroundWindow();
         var foregroundThread = GetWindowThreadProcessId(foreground, out _);
         var targetThread = GetWindowThreadProcessId(hwnd, out _);
         var thisThread = GetCurrentThreadId();
         AttachThreadInput(thisThread, foregroundThread, true);
         AttachThreadInput(thisThread, targetThread, true);
+        BringWindowToTop(hwnd);
         var ok = SetForegroundWindow(hwnd);
         AttachThreadInput(thisThread, targetThread, false);
         AttachThreadInput(thisThread, foregroundThread, false);
-        return ok;
+        return ok || GetForegroundWindow() == hwnd;
     }
 
     public static void SendCtrlV()
@@ -147,4 +243,11 @@ struct NativeRect
     public int Top;
     public int Right;
     public int Bottom;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+struct NativePoint
+{
+    public int X;
+    public int Y;
 }

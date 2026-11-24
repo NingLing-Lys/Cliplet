@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace Cliplet;
 
@@ -83,6 +85,7 @@ public sealed class ClipItem : INotifyPropertyChanged
 
     public string Title => Kind switch
     {
+        ClipKind.Image => "图片",
         ClipKind.Files when FilePaths.Length == 1 => Path.GetFileName(FilePaths[0]),
         ClipKind.Files => $"{FilePaths.Length} 个文件",
         _ => string.IsNullOrWhiteSpace(Preview) ? "空白文本" : Preview
@@ -105,14 +108,63 @@ public sealed class ClipItem : INotifyPropertyChanged
     {
         get
         {
+            string? path = null;
             if (Kind == ClipKind.Image)
             {
-                if (File.Exists(ImagePath)) return ImagePath;
+                if (File.Exists(ImagePath)) path = ImagePath;
+                else if (File.Exists(ThumbPath)) path = ThumbPath;
+            }
+            else if (Kind == ClipKind.Files)
+                path = FilePaths.FirstOrDefault(p => IsImageFile(p) && File.Exists(p));
+
+            // Tiny clipboard icons look awful when blown up in the preview card.
+            return IsLargeEnoughPreview(path) ? path : null;
+        }
+    }
+
+    public string? ThumbPathForList
+    {
+        get
+        {
+            if (Kind == ClipKind.Image)
+            {
                 if (File.Exists(ThumbPath)) return ThumbPath;
+                if (File.Exists(ImagePath) && IsLargeEnoughPreview(ImagePath)) return ImagePath;
             }
             if (Kind == ClipKind.Files)
-                return FilePaths.FirstOrDefault(path => IsImageFile(path) && File.Exists(path));
+            {
+                var path = FilePaths.FirstOrDefault(p => IsImageFile(p) && File.Exists(p));
+                return IsLargeEnoughPreview(path) ? path : null;
+            }
             return null;
+        }
+    }
+
+    /// <summary>Small crisp app badge shown beside the subtitle.</summary>
+    public ImageSource? SourceIcon => AppIcons.Resolve(SourceApp);
+
+    public bool ShowListThumb => !string.IsNullOrEmpty(ThumbPathForList);
+
+    public bool ShowSourceIcon => SourceIcon != null && !ShowListThumb;
+
+    public bool ShowKindMark => !ShowListThumb && !ShowSourceIcon;
+
+    static bool IsLargeEnoughPreview(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+        try
+        {
+            var info = new FileInfo(path);
+            // Very small files are almost always icons / emoji bitmaps.
+            if (info.Length < 8_000) return false;
+            using var stream = File.OpenRead(path);
+            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation, BitmapCacheOption.None);
+            var frame = decoder.Frames[0];
+            return Math.Max(frame.PixelWidth, frame.PixelHeight) >= 96;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -122,6 +174,18 @@ public sealed class ClipItem : INotifyPropertyChanged
 
     public string PinGlyph => Pinned ? "★" : "☆";
 
+    string shortcutHint = "";
+    public string ShortcutHint
+    {
+        get => shortcutHint;
+        set
+        {
+            if (shortcutHint == value) return;
+            shortcutHint = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string Subtitle
     {
         get
@@ -129,8 +193,9 @@ public sealed class ClipItem : INotifyPropertyChanged
             var parts = new List<string> { KindLabel };
             if (Kind == ClipKind.Files && FilePaths.Any(path => !File.Exists(path) && !Directory.Exists(path)))
                 parts.Add("文件已不在原位置");
-            if (!string.IsNullOrWhiteSpace(SourceApp))
-                parts.Add(SourceApp);
+            var source = LocalizeSource(SourceApp);
+            if (!string.IsNullOrWhiteSpace(source))
+                parts.Add(source);
             parts.Add(Relative(CreatedAt));
             return string.Join(" · ", parts);
         }
@@ -138,7 +203,7 @@ public sealed class ClipItem : INotifyPropertyChanged
 
     string KindLabel => Category switch
     {
-        ContentCategory.Text => "文字",
+        ContentCategory.Text => "文本",
         ContentCategory.Image => "图片",
         ContentCategory.Video => "视频",
         ContentCategory.Audio => "音频",
@@ -146,6 +211,46 @@ public sealed class ClipItem : INotifyPropertyChanged
         ContentCategory.File when FilePaths.Length > 1 => $"{FilePaths.Length} 个文件",
         _ => "文件"
     };
+
+    public static string LocalizeSource(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        var name = raw.Trim();
+        var key = name.ToLowerInvariant();
+
+        // Common process names / English product names → Chinese when natural.
+        if (key is "weixin" or "wechat" or "wechatappex" or "wechatbrowser") return "微信";
+        if (key is "qq" or "tim") return "QQ";
+        if (key is "dingtalk" or "dingtalklauncher") return "钉钉";
+        if (key is "feishu" or "lark" or "larkshell") return "飞书";
+        if (key is "notepad") return "记事本";
+        if (key is "explorer") return "资源管理器";
+        if (key is "applicationframehost") return "系统应用";
+        if (key is "windowsterminal" or "windowsterminal.exe" or "wt") return "终端";
+        if (key is "cmd" or "powershell" or "pwsh") return "终端";
+        if (key is "chrome" or "google chrome") return "Chrome";
+        if (key is "msedge" or "microsoft edge" or "edge") return "Edge";
+        if (key is "firefox") return "Firefox";
+        if (key is "code" or "code - oss" or "code.exe") return "VS Code";
+        if (key is "cursor") return "Cursor";
+        if (key is "winword" or "microsoft word") return "Word";
+        if (key is "excel" or "microsoft excel") return "Excel";
+        if (key is "powerpnt" or "microsoft powerpoint") return "PowerPoint";
+        if (key is "wps" or "wpsoffice" or "kingsoft office") return "WPS";
+        if (key is "snippingtool" or "screensketch") return "截图";
+        if (key is "telegram" or "telegram.exe") return "Telegram";
+        if (key is "discord") return "Discord";
+        if (key is "spotify") return "Spotify";
+        if (key.Contains("weixin") || key.Contains("wechat")) return "微信";
+        if (key.Contains("dingtalk")) return "钉钉";
+        if (key.Contains("feishu") || key.Contains("lark")) return "飞书";
+        if (name.Contains("微信", StringComparison.Ordinal)) return "微信";
+
+        // Strip trailing "App" / version noise for cleaner labels.
+        if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            name = name[..^4];
+        return name;
+    }
 
     public void RefreshLabels() => OnPropertyChanged(nameof(Subtitle));
 
@@ -225,11 +330,10 @@ public sealed class ClipItem : INotifyPropertyChanged
 
     static string Relative(DateTime time)
     {
+        if (time.Date == DateTime.Today)
+            return time.ToString("HH:mm");
         var span = DateTime.Now - time;
-        if (span.TotalSeconds < 45) return "刚刚";
-        if (span.TotalMinutes < 60) return $"{Math.Max(1, (int)span.TotalMinutes)} 分钟前";
-        if (span.TotalHours < 24) return $"{Math.Max(1, (int)span.TotalHours)} 小时前";
-        if (span.TotalDays < 7) return $"{(int)span.TotalDays} 天前";
+        if (span.TotalDays < 7) return $"{Math.Max(1, (int)span.TotalDays)} 天前";
         return time.ToString("M月d日");
     }
 }

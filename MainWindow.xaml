@@ -7,11 +7,12 @@
         MinWidth="360"
         MinHeight="420"
         WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         Topmost="True"
         WindowStartupLocation="Manual"
-        Background="{DynamicResource WindowBg}"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
@@ -21,13 +22,17 @@
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="6">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="15"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
@@ -39,22 +44,20 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="ChipButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+
+        <Style x:Key="QuietChip" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
+                                CornerRadius="999"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -67,333 +70,809 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="FilterChip" TargetType="Button" BasedOn="{StaticResource ChipButton}">
-            <Setter Property="Margin" Value="0,0,6,0"/>
-            <Setter Property="Padding" Value="9,3"/>
-            <Setter Property="MinWidth" Value="40"/>
+
+        <Style x:Key="GlassChip" TargetType="Button" BasedOn="{StaticResource QuietChip}">
+            <Setter Property="Background" Value="{DynamicResource ChipFill}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
-        <Style x:Key="FilterChipSelected" TargetType="Button" BasedOn="{StaticResource FilterChip}">
-            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+
+        <Style x:Key="RowTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RowMeta" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Foreground" Value="#CCFFFFFF"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="RowHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#B0B0B5"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                    <Setter Property="Foreground" Value="#AAFFFFFF"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Glass context menu matching panel theme -->
+        <Style x:Key="GlassMenuItem" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,9"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Row"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="4,1">
+                            <TextBlock Text="{TemplateBinding Header}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource ItemHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="GlassDangerMenuItem" TargetType="MenuItem" BasedOn="{StaticResource GlassMenuItem}">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Row"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="4,1">
+                            <TextBlock Text="{TemplateBinding Header}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="#18FF3B30"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="GlassContextMenu" TargetType="ContextMenu">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HasDropShadow" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Grid Margin="4">
+                            <Border CornerRadius="14"
+                                    Background="#28000000"
+                                    Margin="2,3,-1,-1"
+                                    Opacity="0.4">
+                                <Border.Effect>
+                                    <BlurEffect Radius="12"/>
+                                </Border.Effect>
+                            </Border>
+                            <Border Background="{DynamicResource CardBg}"
+                                    BorderBrush="{DynamicResource GlassStroke}"
+                                    BorderThickness="1"
+                                    CornerRadius="14"
+                                    Padding="4,5">
+                                <StackPanel IsItemsHost="True"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- iOS / WeChat style sliding switch -->
+        <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Canvas Width="46" Height="28">
+                            <Border x:Name="Track"
+                                    Width="46" Height="28"
+                                    CornerRadius="14"
+                                    Background="#D1D1D6"/>
+                            <Ellipse x:Name="Thumb"
+                                     Canvas.Left="3" Canvas.Top="3"
+                                     Width="22" Height="22"
+                                     Fill="White">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="5" ShadowDepth="1" Opacity="0.2" Color="#000000"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                        </Canvas>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Thumb" Property="Canvas.Left" Value="21"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Thumb"
+                                                             Storyboard.TargetProperty="(Canvas.Left)"
+                                                             To="21" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseInOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Thumb"
+                                                             Storyboard.TargetProperty="(Canvas.Left)"
+                                                             To="3" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseInOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="Thumb" Property="Canvas.Left" Value="3"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
-    <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="14,10,8,0" MouseLeftButtonDown="Title_MouseLeftButtonDown">
-                <TextBlock Text="Cliplet" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
-                <Button Content="×" HorizontalAlignment="Right" FontSize="16" Style="{StaticResource IconButton}" Click="Close_Click" ToolTip="关闭"/>
-            </Grid>
+    <Grid Margin="12">
+        <!-- Soft shadow -->
+        <Border CornerRadius="18" Background="#28000000" Margin="3,5,-1,-1" Opacity="0.45">
+            <Border.Effect>
+                <BlurEffect Radius="16"/>
+            </Border.Effect>
+        </Border>
 
-            <StackPanel Grid.Row="1" Margin="12,10,12,8">
-                <Border Padding="10,7" CornerRadius="8" Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1">
-                    <Grid>
-                        <TextBox x:Name="SearchBox"
-                                 Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 FontSize="14"
-                                 Foreground="{DynamicResource TextBrush}"
-                                 CaretBrush="{DynamicResource TextBrush}"/>
-                        <TextBlock Text="搜索文本、文件或来源"
-                                   IsHitTestVisible="False"
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource SecondaryBrush}"
-                                   Visibility="{Binding Query, Converter={StaticResource EmptyToVisible}}"/>
-                    </Grid>
-                </Border>
-                <ScrollViewer Margin="0,8,0,0"
-                              HorizontalScrollBarVisibility="Hidden"
-                              VerticalScrollBarVisibility="Disabled"
-                              CanContentScroll="False">
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="全部" Click="Filter_Click" Tag="All" ToolTip="显示全部类型">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsFilterAll}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Content="文字" Click="Filter_Click" Tag="Text" ToolTip="纯文本">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsFilterText}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Content="图片" Click="Filter_Click" Tag="Image" ToolTip="截图或图片文件">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsFilterImage}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Content="视频" Click="Filter_Click" Tag="Video" ToolTip="视频文件">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsFilterVideo}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Content="音频" Click="Filter_Click" Tag="Audio" ToolTip="音频文件">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsFilterAudio}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Content="链接" Click="Filter_Click" Tag="Link" ToolTip="网址链接">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsFilterLink}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Content="文件" Click="Filter_Click" Tag="File" ToolTip="其他文件或混合类型" Margin="0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource FilterChip}">
-                                    <Setter Property="Margin" Value="0"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsFilterFile}" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </StackPanel>
-                </ScrollViewer>
-            </StackPanel>
-
-            <Grid Grid.Row="2">
+        <Border x:Name="GlassShell"
+                CornerRadius="16"
+                Background="{DynamicResource GlassFill}"
+                BorderBrush="{DynamicResource GlassStroke}"
+                BorderThickness="1"
+                ClipToBounds="True">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Border Grid.Row="0"
-                        Margin="12,0,12,8"
-                        Padding="8"
-                        CornerRadius="8"
-                        Background="{DynamicResource CardBg}"
-                        BorderBrush="{DynamicResource LineBrush}"
-                        BorderThickness="1"
-                        Visibility="{Binding SelectedItem.PreviewPath, ElementName=ClipList, Converter={StaticResource NonEmptyToVisible}}">
-                    <Image MaxHeight="180"
-                           Stretch="Uniform"
-                           Source="{Binding SelectedItem.PreviewPath, ElementName=ClipList, Converter={StaticResource PathToImage}, ConverterParameter=640}"/>
-                </Border>
-                <Border x:Name="TextTools"
-                        Grid.Row="1"
-                        Margin="12,0,12,8"
-                        Padding="8"
-                        CornerRadius="8"
-                        Background="{DynamicResource CardBg}"
-                        BorderBrush="{DynamicResource LineBrush}"
-                        BorderThickness="1"
-                        Visibility="Collapsed">
-                    <StackPanel>
-                        <FlowDocumentScrollViewer x:Name="FormulaView"
-                                                  MaxHeight="230"
-                                                  VerticalScrollBarVisibility="Auto"
-                                                  HorizontalScrollBarVisibility="Disabled"
-                                                  IsToolBarVisible="False"
-                                                  Focusable="False"
-                                                  IsTabStop="False"
-                                                  Background="Transparent"
-                                                  BorderThickness="0"
-                                                  Visibility="Collapsed"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                            <Button x:Name="OptimizeButton"
-                                    Content="优化提示词"
-                                    Style="{StaticResource ChipButton}"
-                                    Click="Optimize_Click"
-                                    ToolTip="整理成更好发给大模型的提示词"/>
-                            <Button x:Name="FormulaImageButton"
-                                    Content="复制公式图"
-                                    Style="{StaticResource ChipButton}"
-                                    Click="FormulaImage_Click"
-                                    Visibility="Collapsed"
-                                    ToolTip="把公式排成一张图，方便贴到微信"/>
-                        </StackPanel>
+
+                <!-- Search header -->
+                <Grid Grid.Row="0" Margin="14,14,12,8" MouseLeftButtonDown="Title_MouseLeftButtonDown">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Padding="12,9"
+                            CornerRadius="12"
+                            Background="{DynamicResource SearchFill}"
+                            BorderBrush="{DynamicResource LineBrush}"
+                            BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="⌕"
+                                       FontSize="14"
+                                       Margin="0,0,8,0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource SecondaryBrush}"/>
+                            <Grid Grid.Column="1">
+                                <TextBox x:Name="SearchBox"
+                                         Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         FontSize="13.5"
+                                         Foreground="{DynamicResource TextBrush}"
+                                         CaretBrush="{DynamicResource AccentBrush}"/>
+                                <TextBlock Text="搜索剪贴板历史"
+                                           IsHitTestVisible="False"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SecondaryBrush}"
+                                           Visibility="{Binding Query, Converter={StaticResource EmptyToVisible}}"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Button Grid.Column="1"
+                            Margin="8,0,0,0"
+                            Style="{StaticResource IconButton}"
+                            Click="Settings_Click"
+                            ToolTip="设置">
+                        <!-- Clean slider / settings mark -->
+                        <Viewbox Width="15" Height="15">
+                            <Canvas Width="24" Height="24">
+                                <Path Stroke="{DynamicResource SecondaryBrush}"
+                                      StrokeThickness="1.8"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Fill="Transparent"
+                                      Data="M4 7 H20 M4 12 H20 M4 17 H20"/>
+                                <Ellipse Canvas.Left="8" Canvas.Top="4.2" Width="5.6" Height="5.6"
+                                         Fill="{DynamicResource GlassFill}"
+                                         Stroke="{DynamicResource SecondaryBrush}" StrokeThickness="1.8"/>
+                                <Ellipse Canvas.Left="14" Canvas.Top="9.2" Width="5.6" Height="5.6"
+                                         Fill="{DynamicResource GlassFill}"
+                                         Stroke="{DynamicResource SecondaryBrush}" StrokeThickness="1.8"/>
+                                <Ellipse Canvas.Left="6" Canvas.Top="14.2" Width="5.6" Height="5.6"
+                                         Fill="{DynamicResource GlassFill}"
+                                         Stroke="{DynamicResource SecondaryBrush}" StrokeThickness="1.8"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                    <Button Grid.Column="2"
+                            Content="✕"
+                            FontSize="12"
+                            Margin="4,0,0,0"
+                            Style="{StaticResource IconButton}"
+                            Click="Close_Click"
+                            ToolTip="关闭"/>
+                </Grid>
+
+                <!-- Filters + multi-select -->
+                <DockPanel Grid.Row="1" Margin="14,0,14,6">
+                    <Button DockPanel.Dock="Right"
+                            Content="{Binding MultiSelectLabel}"
+                            Style="{StaticResource QuietChip}"
+                            Margin="8,0,0,0"
+                            Click="MultiSelect_Click"
+                            ToolTip="多选删除"/>
+                    <ScrollViewer HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="全部" Click="Filter_Click" Tag="All">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource QuietChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterAll}" Value="True">
+                                            <Setter Property="Background" Value="#1A007AFF"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="文本" Click="Filter_Click" Tag="Text">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource QuietChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterText}" Value="True">
+                                            <Setter Property="Background" Value="#1A007AFF"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="图片" Click="Filter_Click" Tag="Image">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource QuietChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterImage}" Value="True">
+                                            <Setter Property="Background" Value="#1A007AFF"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="链接" Click="Filter_Click" Tag="Link">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource QuietChip}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterLink}" Value="True">
+                                            <Setter Property="Background" Value="#1A007AFF"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="文件" Click="Filter_Click" Tag="File" Margin="0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource QuietChip}">
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFilterFile}" Value="True">
+                                            <Setter Property="Background" Value="#1A007AFF"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                     </StackPanel>
-                </Border>
+                    </ScrollViewer>
+                </DockPanel>
+
                 <Grid Grid.Row="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                <Border Grid.Row="0"
-                        Margin="12,0,12,6"
-                        Padding="8,6"
-                        CornerRadius="8"
-                        Background="{DynamicResource CardBg}"
-                        BorderBrush="{DynamicResource LineBrush}"
-                        BorderThickness="1"
-                        Visibility="{Binding HasChecked, Converter={StaticResource BoolToVisible}}">
-                    <DockPanel>
-                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                            <Button Content="全选" Style="{StaticResource ChipButton}" Click="SelectAll_Click" ToolTip="勾选当前列表全部"/>
-                            <Button Content="取消勾选" Style="{StaticResource ChipButton}" Click="ClearChecks_Click"/>
-                            <Button Content="{Binding DeleteCheckedLabel}" Style="{StaticResource ChipButton}" Click="DeleteChecked_Click" ToolTip="删除勾选的记录" Margin="0"/>
+
+                    <!-- MaxHeight/Opacity animated in code so list doesn't jump -->
+                    <Border x:Name="ImagePreview"
+                            Grid.Row="0"
+                            Margin="14,0,14,0"
+                            Padding="6"
+                            CornerRadius="12"
+                            Background="{DynamicResource CardBg}"
+                            MaxHeight="0"
+                            Opacity="0"
+                            ClipToBounds="True"
+                            IsHitTestVisible="False">
+                        <Image x:Name="PreviewImage"
+                               MaxHeight="110"
+                               Stretch="Uniform"/>
+                    </Border>
+
+                    <Border x:Name="TextTools"
+                            Grid.Row="1"
+                            Margin="14,0,14,0"
+                            Padding="10,8"
+                            CornerRadius="12"
+                            Background="{DynamicResource CardBg}"
+                            MaxHeight="0"
+                            Opacity="0"
+                            ClipToBounds="True"
+                            IsHitTestVisible="False">
+                        <StackPanel>
+                            <FlowDocumentScrollViewer x:Name="FormulaView"
+                                                      MaxHeight="180"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      IsToolBarVisible="False"
+                                                      Focusable="False"
+                                                      IsTabStop="False"
+                                                      Background="Transparent"
+                                                      BorderThickness="0"
+                                                      Visibility="Collapsed"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <Button x:Name="OptimizeButton"
+                                        Content="优化提示词"
+                                        Style="{StaticResource GlassChip}"
+                                        Click="Optimize_Click"
+                                        ToolTip="整理成更好发给大模型的提示词"/>
+                                <Button x:Name="FormulaImageButton"
+                                        Content="复制公式图"
+                                        Style="{StaticResource GlassChip}"
+                                        Click="FormulaImage_Click"
+                                        Visibility="Collapsed"
+                                        Margin="0"
+                                        ToolTip="把公式排成一张图，方便贴到微信"/>
+                            </StackPanel>
                         </StackPanel>
-                        <TextBlock Text="{Binding CheckedCount, StringFormat=已勾选 {0} 条}"
+                    </Border>
+
+                    <Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0"
+                                Margin="14,0,14,4"
+                                Padding="10,7"
+                                CornerRadius="10"
+                                Background="{DynamicResource CardBg}"
+                                Visibility="{Binding MultiSelectMode, Converter={StaticResource BoolToVisible}}">
+                            <DockPanel>
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                    <Button Content="全选" Style="{StaticResource QuietChip}" Click="SelectAll_Click"/>
+                                    <Button Content="{Binding DeleteCheckedLabel}"
+                                            Style="{StaticResource GlassChip}"
+                                            Foreground="{DynamicResource DangerBrush}"
+                                            Click="DeleteChecked_Click"
+                                            Margin="0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding CheckedCount, StringFormat=已选 {0}}"
+                                           VerticalAlignment="Center"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource SecondaryBrush}"/>
+                            </DockPanel>
+                        </Border>
+
+                        <ListBox x:Name="ClipList"
+                                 Grid.Row="1"
+                                 ItemsSource="{Binding Visible}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Padding="8,0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 HorizontalContentAlignment="Stretch"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 PreviewMouseLeftButtonDown="ClipList_PreviewMouseLeftButtonDown"
+                                 PreviewMouseLeftButtonUp="ClipList_PreviewMouseLeftButtonUp"
+                                 MouseDoubleClick="ClipList_MouseDoubleClick"
+                                 SelectionChanged="ClipList_SelectionChanged">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="10,9"/>
+                                    <Setter Property="Margin" Value="2,1"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="Row"
+                                                        Background="Transparent"
+                                                        CornerRadius="10"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource ItemHover}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource ItemSelected}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Background="Transparent">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu Style="{StaticResource GlassContextMenu}">
+                                                <MenuItem Header="删除"
+                                                          Style="{StaticResource GlassDangerMenuItem}"
+                                                          Click="ContextDelete_Click"/>
+                                                <MenuItem Header="置顶 / 取消置顶"
+                                                          Style="{StaticResource GlassMenuItem}"
+                                                          Click="ContextPin_Click"/>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,8,0"
+                                                  Click="Check_Click"
+                                                  Visibility="{Binding DataContext.MultiSelectMode, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolToVisible}}"/>
+
+                                        <!-- Leading icon: thumb / app / type mark -->
+                                        <Border Grid.Column="1"
+                                                Width="28" Height="28"
+                                                CornerRadius="7"
+                                                Background="{DynamicResource ChipFill}"
+                                                ClipToBounds="True"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0">
+                                            <Grid>
+                                                <TextBlock Text="{Binding KindMark}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource SecondaryBrush}"
+                                                           Visibility="{Binding ShowKindMark, Converter={StaticResource BoolToVisible}}"/>
+                                                <Image Source="{Binding SourceIcon}"
+                                                       Width="28" Height="28"
+                                                       Stretch="UniformToFill"
+                                                       SnapsToDevicePixels="True"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       Visibility="{Binding ShowSourceIcon, Converter={StaticResource BoolToVisible}}"/>
+                                                <Image Source="{Binding ThumbPathForList, Converter={StaticResource PathToImage}}"
+                                                       Width="28" Height="28"
+                                                       Stretch="UniformToFill"
+                                                       Visibility="{Binding ShowListThumb, Converter={StaticResource BoolToVisible}}"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,6,0">
+                                            <TextBlock Text="{Binding Title}" Style="{StaticResource RowTitle}"/>
+                                            <TextBlock Text="{Binding Subtitle}"
+                                                       Style="{StaticResource RowMeta}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="{Binding PinGlyph}"
+                                                    FontSize="12"
+                                                    Width="24" Height="24"
+                                                    Click="Pin_Click"
+                                                    ToolTip="置顶"
+                                                    Opacity="0.55">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                                        <Setter Property="Width" Value="24"/>
+                                                        <Setter Property="Height" Value="24"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Pinned}" Value="True">
+                                                                <Setter Property="Foreground" Value="#FFD60A"/>
+                                                                <Setter Property="Opacity" Value="1"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                                <Setter Property="Foreground" Value="#CCFFFFFF"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <TextBlock Text="{Binding ShortcutHint}" Style="{StaticResource RowHint}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Text="{Binding EmptyText}"
+                                   HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   FontSize="12"
+                                   Margin="28"
+                                   TextAlignment="Center"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource SecondaryBrush}"
+                                   IsHitTestVisible="False"
+                                   Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisible}}"/>
+                    </Grid>
+                </Grid>
+
+                <!-- Footer -->
+                <Border Grid.Row="3"
+                        BorderBrush="{DynamicResource LineBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="16,10,16,12">
+                    <Grid>
+                        <TextBlock Text="{Binding Status}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource SecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="0,0,90,0"/>
+                        <TextBlock Text="{Binding RecordCountLabel}"
+                                   HorizontalAlignment="Right"
+                                   FontSize="11"
                                    Foreground="{DynamicResource SecondaryBrush}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Settings overlay — WeChat-like rows -->
+                <Border x:Name="SettingsPanel"
+                        Grid.RowSpan="4"
+                        Background="{DynamicResource GlassFill}"
+                        Visibility="Collapsed"
+                        Padding="20,16,20,14">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="2,0,0,18">
+                            <Button DockPanel.Dock="Right"
+                                    Content="✕"
+                                    Style="{StaticResource IconButton}"
+                                    Click="SettingsClose_Click"
+                                    ToolTip="关闭设置"/>
+                            <TextBlock Text="设置"
+                                       FontSize="17"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextBrush}"/>
+                        </DockPanel>
+
+                        <Button DockPanel.Dock="Bottom"
+                                Content="恢复默认设置"
+                                HorizontalAlignment="Right"
+                                Margin="0,16,0,0"
+                                Padding="12,8"
+                                MinWidth="132"
+                                FontSize="13"
+                                Cursor="Hand"
+                                Foreground="{DynamicResource TextBrush}"
+                                Background="{DynamicResource ChipFill}"
+                                BorderBrush="{DynamicResource LineBrush}"
+                                BorderThickness="1"
+                                Click="RestoreDefaults_Click"
+                                ToolTip="热键恢复为 Ctrl+Alt+V / Ctrl+Alt+A">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bg"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="8"
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ItemHover}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <StackPanel>
+                            <!-- Row: startup -->
+                            <DockPanel Margin="0,0,0,18">
+                                <CheckBox x:Name="StartupToggle"
+                                          DockPanel.Dock="Right"
+                                          VerticalAlignment="Center"
+                                          Style="{StaticResource ToggleSwitch}"
+                                          Click="StartupToggle_Click"/>
+                                <TextBlock Text="开机启动"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </DockPanel>
+
+                            <!-- Row: pause -->
+                            <DockPanel Margin="0,0,0,18">
+                                <CheckBox x:Name="PauseToggle"
+                                          DockPanel.Dock="Right"
+                                          VerticalAlignment="Center"
+                                          Style="{StaticResource ToggleSwitch}"
+                                          Click="PauseToggle_Click"/>
+                                <TextBlock Text="暂停记录"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </DockPanel>
+
+                            <!-- Row: hide after paste -->
+                            <DockPanel Margin="0,0,0,18">
+                                <CheckBox x:Name="HideOnPasteToggle"
+                                          DockPanel.Dock="Right"
+                                          VerticalAlignment="Center"
+                                          Style="{StaticResource ToggleSwitch}"
+                                          Click="HideOnPasteToggle_Click"/>
+                                <TextBlock Text="选中后隐藏窗口"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </DockPanel>
+
+                            <!-- Row: open panel hotkey -->
+                            <DockPanel Margin="0,0,0,12">
+                                <Border x:Name="HotkeyCaptureBox"
+                                        DockPanel.Dock="Right"
+                                        MinWidth="132"
+                                        Padding="12,8"
+                                        CornerRadius="8"
+                                        Background="{DynamicResource ChipFill}"
+                                        BorderBrush="{DynamicResource LineBrush}"
+                                        BorderThickness="1"
+                                        Cursor="Hand"
+                                        Focusable="True"
+                                        MouseLeftButtonDown="HotkeyCapture_MouseDown"
+                                        PreviewKeyDown="HotkeyCapture_PreviewKeyDown"
+                                        LostKeyboardFocus="HotkeyCapture_LostFocus">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right"
+                                                Content="✕"
+                                                Width="20" Height="20"
+                                                FontSize="10"
+                                                Margin="8,0,0,0"
+                                                Style="{StaticResource IconButton}"
+                                                Click="HotkeyClear_Click"
+                                                ToolTip="恢复为 Ctrl+Alt+V"/>
+                                        <TextBlock x:Name="HotkeyCaptureText"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                    </DockPanel>
+                                </Border>
+                                <TextBlock Text="打开面板"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </DockPanel>
+
+                            <!-- Row: screenshot hotkey -->
+                            <DockPanel Margin="0,0,0,8">
+                                <Border x:Name="ScreenshotHotkeyCaptureBox"
+                                        DockPanel.Dock="Right"
+                                        MinWidth="132"
+                                        Padding="12,8"
+                                        CornerRadius="8"
+                                        Background="{DynamicResource ChipFill}"
+                                        BorderBrush="{DynamicResource LineBrush}"
+                                        BorderThickness="1"
+                                        Cursor="Hand"
+                                        Focusable="True"
+                                        MouseLeftButtonDown="ScreenshotHotkeyCapture_MouseDown"
+                                        PreviewKeyDown="ScreenshotHotkeyCapture_PreviewKeyDown"
+                                        LostKeyboardFocus="ScreenshotHotkeyCapture_LostFocus">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right"
+                                                Content="✕"
+                                                Width="20" Height="20"
+                                                FontSize="10"
+                                                Margin="8,0,0,0"
+                                                Style="{StaticResource IconButton}"
+                                                Click="ScreenshotHotkeyClear_Click"
+                                                ToolTip="恢复为 Ctrl+Alt+A"/>
+                                        <TextBlock x:Name="ScreenshotHotkeyCaptureText"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   FontSize="13"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                    </DockPanel>
+                                </Border>
+                                <TextBlock Text="截屏"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </DockPanel>
+
+                            <TextBlock x:Name="HotkeyHint"
+                                       FontSize="11"
+                                       Margin="0,2,0,0"
+                                       Foreground="{DynamicResource SecondaryBrush}"
+                                       TextWrapping="Wrap"
+                                       Text="点击右侧，按 F1 或 Ctrl+Alt+A 等即可设置"/>
+                        </StackPanel>
                     </DockPanel>
                 </Border>
-                <ListBox x:Name="ClipList"
-                         Grid.Row="1"
-                         ItemsSource="{Binding Visible}"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         HorizontalContentAlignment="Stretch"
-                         VirtualizingPanel.IsVirtualizing="True"
-                         PreviewMouseLeftButtonUp="ClipList_PreviewMouseLeftButtonUp"
-                         MouseDoubleClick="ClipList_MouseDoubleClick"
-                         SelectionChanged="ClipList_SelectionChanged">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Padding" Value="8,6"/>
-                            <Setter Property="Margin" Value="8,1"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="Row" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource ItemHover}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource ItemSelected}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="36"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          VerticalAlignment="Center"
-                                          Margin="0,0,8,0"
-                                          Click="Check_Click"
-                                          ToolTip="勾选后可批量删除"/>
-                                <Grid Grid.Column="1" Width="36" Height="36">
-                                    <Border Background="{DynamicResource ItemHover}" CornerRadius="7"/>
-                                    <TextBlock Text="{Binding KindMark}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryBrush}" FontSize="13"/>
-                                    <Image Source="{Binding PreviewPath, Converter={StaticResource PathToImage}}" Stretch="UniformToFill">
-                                        <Image.Clip>
-                                            <RectangleGeometry RadiusX="7" RadiusY="7" Rect="0,0,36,36"/>
-                                        </Image.Clip>
-                                    </Image>
-                                </Grid>
-                                <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" FontSize="13" Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="{Binding Subtitle}" Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource SecondaryBrush}" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button Content="删除" FontSize="12" Click="Delete_Click" ToolTip="删除这条记录" Margin="0,0,2,0">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
-                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                                <Button Content="{Binding PinGlyph}" Click="Pin_Click" ToolTip="置顶或取消置顶">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
-                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryBrush}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Pinned}" Value="True">
-                                                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <TextBlock Text="{Binding EmptyText}"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Margin="24"
-                           TextAlignment="Center"
-                           FontSize="13"
-                           Foreground="{DynamicResource SecondaryBrush}"
-                           IsHitTestVisible="False"
-                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisible}}"/>
-                </Grid>
             </Grid>
-
-            <Border Grid.Row="3" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="14,8,22,10">
-                <Grid>
-                    <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource SecondaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,110,0"/>
-                    <TextBlock Text="{Binding HotkeyLabel, StringFormat={}{0} 开关}" HorizontalAlignment="Right" FontSize="11" Foreground="{DynamicResource SecondaryBrush}"/>
-                </Grid>
-            </Border>
-        </Grid>
-    </Border>
+        </Border>
+    </Grid>
 </Window>

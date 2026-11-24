@@ -30,7 +30,7 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
     public string? SelectedId { get; set; }
 
     string query = "";
-    string status = "单击复制，双击或回车粘贴";
+    string status = "点一下粘贴";
     string hotkeyLabel = "Ctrl+Alt+V";
     bool paused;
     ContentFilter filter = ContentFilter.All;
@@ -115,6 +115,19 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
         }
     }
 
+    string screenshotHotkeyLabel = "Ctrl+Alt+A";
+
+    public string ScreenshotHotkeyLabel
+    {
+        get => screenshotHotkeyLabel;
+        set
+        {
+            if (screenshotHotkeyLabel == value) return;
+            screenshotHotkeyLabel = value;
+            OnPropertyChanged();
+        }
+    }
+
     public bool Paused
     {
         get => paused;
@@ -180,9 +193,19 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
     public void Copy(ClipItem item)
     {
         var rich = WriteClipboard(item);
+        Promote(item);
         Status = rich
             ? "已复制。Word 里会显示公式，纯文本框仍是 LaTeX"
             : "已复制";
+    }
+
+    /// <summary>LRU: move a used clip to the top of its pin group.</summary>
+    public void Promote(ClipItem item)
+    {
+        item.CreatedAt = DateTime.Now;
+        database.SetCreatedAt(item.Id, item.CreatedAt);
+        SelectedId = item.Id;
+        Rebuild();
     }
 
     public void CopyOptimizedPrompt(ClipItem item)
@@ -191,6 +214,9 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
         var data = new DataObject();
         data.SetText(FormulaText.OptimizePrompt(item.Text));
         Clipboard.SetDataObject(data, copy: true);
+        // Treat as our own write so the monitor does not add a duplicate history row.
+        internalSequence = NativeMethods.GetClipboardSequenceNumber();
+        lastSequence = internalSequence;
         Status = "已复制优化后的提示词，贴到对话里发送";
     }
 
@@ -226,11 +252,34 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
         Rebuild();
     }
 
+    bool multiSelectMode;
+
+    public bool MultiSelectMode
+    {
+        get => multiSelectMode;
+        set
+        {
+            if (multiSelectMode == value) return;
+            multiSelectMode = value;
+            if (!multiSelectMode) ClearChecks();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(MultiSelectLabel));
+        }
+    }
+
+    public string MultiSelectLabel => MultiSelectMode ? "完成" : "多选";
+
+    public void ToggleMultiSelect()
+    {
+        MultiSelectMode = !MultiSelectMode;
+        Status = MultiSelectMode ? "勾选后可批量删除" : "点一下粘贴";
+    }
+
     public int CheckedCount => Visible.Count(item => item.IsChecked);
 
     public bool HasChecked => CheckedCount > 0;
 
-    public string DeleteCheckedLabel => CheckedCount > 0 ? $"删除选中 ({CheckedCount})" : "删除选中";
+    public string DeleteCheckedLabel => CheckedCount > 0 ? $"删除 ({CheckedCount})" : "删除";
 
     public void NotifyCheckedChanged()
     {
@@ -266,6 +315,8 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
         Status = doomed.Count == 1 ? "已删除" : $"已删除 {doomed.Count} 条";
         Rebuild();
         NotifyCheckedChanged();
+        if (Visible.Count == 0 || !HasChecked)
+            MultiSelectMode = false;
     }
 
     void RemoveItems(IReadOnlyList<ClipItem> items)
@@ -383,16 +434,23 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
             .ThenByDescending(item => item.CreatedAt)
             .ToList();
         Visible.Clear();
-        foreach (var item in ordered) Visible.Add(item);
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            ordered[i].ShortcutHint = i < 9 ? $"Ctrl+{i + 1}" : "";
+            Visible.Add(ordered[i]);
+        }
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyText));
+        OnPropertyChanged(nameof(RecordCountLabel));
         NotifyCheckedChanged();
         ListReset?.Invoke();
     }
 
+    public string RecordCountLabel => $"{Visible.Count} 条记录";
+
     Draft? ReadClipboard()
     {
-        var source = NativeMethods.ForegroundAppName();
+        var source = ClipItem.LocalizeSource(NativeMethods.ForegroundAppName());
         if (Clipboard.ContainsFileDropList())
         {
             var paths = Clipboard.GetFileDropList()
@@ -402,7 +460,9 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
                 .ToArray();
             if (paths.Length > 0)
             {
-                var preview = string.Join("、", paths.Select(Path.GetFileName));
+                var preview = paths.Length == 1
+                    ? Path.GetFileName(paths[0])
+                    : $"{paths.Length} 个文件";
                 return new Draft(ClipKind.Files, preview, null, paths, preview, source, Hash(Encoding.UTF8.GetBytes(string.Join("\n", paths))));
             }
         }
@@ -419,6 +479,9 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
 
         var textIsUrl = text != null && (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || text.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
         var largeImage = image != null && Math.Max(image.PixelWidth, image.PixelHeight) >= 200;
+        // Ignore tiny bitmaps (emoji / app glyphs) — they only create blurry previews.
+        if (image != null && Math.Max(image.PixelWidth, image.PixelHeight) < 96)
+            image = null;
         if (image != null && (string.IsNullOrWhiteSpace(text) || (textIsUrl && largeImage)))
             return ImageDraft(image, source);
         if (!string.IsNullOrWhiteSpace(text))
@@ -431,12 +494,11 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
 
     Draft ImageDraft(BitmapSource image, string source)
     {
-        var preview = $"图片 {image.PixelWidth}×{image.PixelHeight}";
         using var stream = new MemoryStream();
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(Scale(image, 1600)));
         encoder.Save(stream);
-        return new Draft(ClipKind.Image, "", image, [], preview, source, Hash(stream.ToArray()));
+        return new Draft(ClipKind.Image, "", image, [], "图片", ClipItem.LocalizeSource(source), Hash(stream.ToArray()));
     }
 
     static string? ReadHtml()
@@ -546,7 +608,7 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
     static string PreviewText(string text)
     {
         var collapsed = string.Join(" ", text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        return collapsed.Length <= 180 ? collapsed : collapsed[..180] + "…";
+        return collapsed.Length <= 100 ? collapsed : collapsed[..100] + "…";
     }
 
     static bool HasVisiblePixel(byte[] pixels)
@@ -699,10 +761,94 @@ public sealed class ClipStore : INotifyPropertyChanged, IDisposable
 
     sealed record Draft(ClipKind Kind, string Text, BitmapSource? Image, string[] FilePaths, string Preview, string SourceApp, string Hash);
 
+    public uint HotkeyMods
+    {
+        get => settings.HotkeyMods;
+        set
+        {
+            if (settings.HotkeyMods == value) return;
+            settings.HotkeyMods = value;
+            SaveSettings();
+            OnPropertyChanged();
+        }
+    }
+
+    public uint HotkeyKey
+    {
+        get => settings.HotkeyKey;
+        set
+        {
+            if (settings.HotkeyKey == value) return;
+            settings.HotkeyKey = value;
+            SaveSettings();
+            OnPropertyChanged();
+        }
+    }
+
+    public void SaveHotkey(uint mods, uint key)
+    {
+        settings.HotkeyMods = mods;
+        settings.HotkeyKey = key;
+        settings.HotkeyPreset = -1; // custom / migrated
+        SaveSettings();
+        OnPropertyChanged(nameof(HotkeyMods));
+        OnPropertyChanged(nameof(HotkeyKey));
+    }
+
+    public void SaveScreenshotHotkey(uint mods, uint key)
+    {
+        settings.ScreenshotHotkeyMods = mods;
+        settings.ScreenshotHotkeyKey = key;
+        SaveSettings();
+        OnPropertyChanged(nameof(ScreenshotHotkeyMods));
+        OnPropertyChanged(nameof(ScreenshotHotkeyKey));
+    }
+
+    public uint ScreenshotHotkeyMods => settings.ScreenshotHotkeyMods;
+    public uint ScreenshotHotkeyKey => settings.ScreenshotHotkeyKey;
+
+    public bool HideOnPaste
+    {
+        get => settings.HideOnPaste;
+        set
+        {
+            if (settings.HideOnPaste == value) return;
+            settings.HideOnPaste = value;
+            SaveSettings();
+            OnPropertyChanged();
+        }
+    }
+
+    public (uint Mods, uint Key) ResolveHotkey()
+    {
+        if (settings.HotkeyKey != 0)
+            return (settings.HotkeyMods, settings.HotkeyKey);
+
+        return settings.HotkeyPreset switch
+        {
+            1 => (NativeMethods.ModControl | NativeMethods.ModShift, NativeMethods.VkSpace),
+            2 => (NativeMethods.ModControl | NativeMethods.ModShift, NativeMethods.VkV),
+            _ => (NativeMethods.ModControl | NativeMethods.ModAlt, NativeMethods.VkV),
+        };
+    }
+
+    public (uint Mods, uint Key) ResolveScreenshotHotkey()
+    {
+        if (settings.ScreenshotHotkeyKey != 0)
+            return (settings.ScreenshotHotkeyMods, settings.ScreenshotHotkeyKey);
+        return (NativeMethods.ModControl | NativeMethods.ModAlt, NativeMethods.VkA);
+    }
+
     sealed class Settings
     {
         public bool Paused { get; set; }
         public int Filter { get; set; }
+        public int HotkeyPreset { get; set; } // legacy
+        public uint HotkeyMods { get; set; }
+        public uint HotkeyKey { get; set; }
+        public uint ScreenshotHotkeyMods { get; set; }
+        public uint ScreenshotHotkeyKey { get; set; }
+        public bool HideOnPaste { get; set; } = true;
         public double Width { get; set; } = 420;
         public double Height { get; set; } = 560;
     }
